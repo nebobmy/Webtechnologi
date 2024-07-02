@@ -1,18 +1,71 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const multer = require('multer');
 const User = require('../models/User');
 
 const router = express.Router();
 
-// Реєстрація користувача
+// Налаштування multer для завантаження зображень
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/');
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
+
+const validateEmail = (email) => {
+    const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@(([^<>()[\]\.,;:\s@"]+\.)+[^<>()[\]\.,;:\s@"]{2,})$/i;
+    return re.test(String(email).toLowerCase());
+};
+
+const validatePhoneNumber = (phoneNumber) => {
+    const re = /^\+?[1-9]\d{1,14}$/;
+    return re.test(phoneNumber);
+};
+
+const validatePassword = (password) => {
+    const re = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*\W).{8,}$/;
+    return re.test(password);
+};
+
 router.post('/register', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { fullName, gender, age, phoneNumber, email, country, password, uniqueField } = req.body;
+
+        // Валідація полів
+        if (!validateEmail(email)) {
+            return res.status(400).send('Invalid email format');
+        }
+        if (!validatePhoneNumber(phoneNumber)) {
+            return res.status(400).send('Invalid phone number format');
+        }
+        if (!validatePassword(password)) {
+            return res.status(400).send('Password must be at least 8 characters long, include upper and lower case letters, a number, and a special character');
+        }
+
+        // Перевірка віку
+        if (age < 18) {
+            return res.status(400).send('Age must be at least 18');
+        }
+
+        // Хешування пароля
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = new User({ email, password: hashedPassword });
+
+        // Створення нового користувача
+        const user = new User({
+            fullName,
+            gender,
+            age,
+            phoneNumber,
+            email,
+            country,
+            password: hashedPassword,
+            uniqueField,
+        });
+
         await user.save();
         res.status(201).send('User registered successfully!');
     } catch (error) {
@@ -20,84 +73,46 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Логін користувача
-router.post('/login', async (req, res) => {
+router.put('/profile', upload.single('profilePicture'), async (req, res) => {
     try {
-        const { email, password } = req.body;
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(400).send('User not found');
-        }
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-            return res.status(400).send('Invalid password');
-        }
-        const token = jwt.sign({ id: user._id }, 'secretkey', { expiresIn: '1h' });
-        res.status(200).json({ token });
-    } catch (error) {
-        res.status(500).send('Error logging in user');
-    }
-});
+        const { fullName, gender, age, phoneNumber, email, country, password, uniqueField } = req.body;
+        const profilePicture = req.file ? req.file.path : undefined;
 
-// Відновлення пароля
-router.post('/forgot-password', async (req, res) => {
-    try {
-        const { email } = req.body;
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(400).send('User not found');
+        // Валідація полів
+        if (email && !validateEmail(email)) {
+            return res.status(400).send('Invalid email format');
+        }
+        if (phoneNumber && !validatePhoneNumber(phoneNumber)) {
+            return res.status(400).send('Invalid phone number format');
+        }
+        if (password && !validatePassword(password)) {
+            return res.status(400).send('Password must be at least 8 characters long, include upper and lower case letters, a number, and a special character');
+        }
+        if (age && age < 18) {
+            return res.status(400).send('Age must be at least 18');
         }
 
-        const token = crypto.randomBytes(32).toString('hex');
-        user.resetPasswordToken = token;
-        user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
-        await user.save();
-
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: 'your-email@gmail.com',
-                pass: 'your-email-password',
-            },
-        });
-
-        const mailOptions = {
-            to: user.email,
-            from: 'passwordreset@library.com',
-            subject: 'Password Reset',
-            text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n
-                Please click on the following link, or paste this into your browser to complete the process:\n\n
-                http://${req.headers.host}/reset-password/${token}\n\n
-                If you did not request this, please ignore this email and your password will remain unchanged.\n`,
+        // Оновлення користувача
+        const updates = {
+            fullName,
+            gender,
+            age,
+            phoneNumber,
+            email,
+            country,
+            uniqueField,
+            profilePicture,
         };
 
-        transporter.sendMail(mailOptions, (err) => {
-            if (err) {
-                return res.status(500).send('Error sending email');
-            }
-            res.status(200).send('Reset password email sent!');
-        });
-    } catch (error) {
-        res.status(500).send('Error resetting password');
-    }
-});
-
-// Встановлення нового пароля
-router.post('/reset-password/:token', async (req, res) => {
-    try {
-        const { password } = req.body;
-        const user = await User.findOne({ resetPasswordToken: req.params.token, resetPasswordExpires: { $gt: Date.now() } });
-        if (!user) {
-            return res.status(400).send('Password reset token is invalid or has expired');
+        if (password) {
+            updates.password = await bcrypt.hash(password, 10);
         }
-        const hashedPassword = await bcrypt.hash(password, 10);
-        user.password = hashedPassword;
-        user.resetPasswordToken = undefined;
-        user.resetPasswordExpires = undefined;
-        await user.save();
-        res.status(200).send('Password has been reset!');
+
+        const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true });
+
+        res.status(200).send(user);
     } catch (error) {
-        res.status(500).send('Error resetting password');
+        res.status(500).send('Error updating profile');
     }
 });
 
