@@ -1,23 +1,139 @@
 body {
     font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    color: #333;
 }
+
+nav {
+    background-color: #333;
+    color: white;
+    padding: 10px;
+    text-align: center;
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+nav ul li {
+    display: inline;
+    margin-right: 10px;
+}
+
+nav ul li a {
+    color: white;
+    text-decoration: none;
+}
+
+nav ul li a:hover {
+    text-decoration: underline;
+}
+
 form {
-    display: flex;
-    flex-direction: column;
-    width: 300px;
-    margin: auto;
+    background: white;
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 500px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    border-radius: 8px;
 }
-input {
+
+input, select, button, textarea {
+    width: calc(100% - 22px);
     margin-bottom: 10px;
     padding: 10px;
     font-size: 16px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
 }
+
 button {
-    padding: 10px;
-    font-size: 16px;
+    background-color: #333;
+    color: white;
+    border: none;
     cursor: pointer;
 }
-label {
-    display: flex;
-    align-items: center;
+
+button:hover {
+    background-color: #555;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #f2f2f2;
+}
+
+th button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+}
+
+th input {
+    margin-top: 5px;
+    padding: 5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+h1, h2 {
+    text-align: center;
+}
+
+#map {
+    margin-top: 20px;
+}
+
+.calendar-container {
+    max-width: 500px;
+    margin: 20px auto;
+    padding: 10px;
+    background: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+.react-calendar {
+    width: 100%;
+    border: none;
+}
+
+.react-calendar__tile {
+    max-width: 100%;
+    text-align: center;
+    padding: 10px;
+}
+
+.react-calendar__navigation button {
+    min-width: 44px;
+    background: none;
+    font-size: 16px;
+    margin-top: 8px;
+}
+
+.react-calendar__tile--now {
+    background: #ffc107;
+}
+
+.react-calendar__tile--active {
+    background: #007bff;
+    color: white;
 }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import ReCAPTCHA from 'react-google-recaptcha';
 
 function Register() {
     const [fullName, setFullName] = useState('');
@@ -12,6 +13,7 @@ function Register() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [uniqueField, setUniqueField] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [recaptchaToken, setRecaptchaToken] = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -31,6 +33,7 @@ function Register() {
                 country,
                 password,
                 uniqueField,
+                'g-recaptcha-response': recaptchaToken,
             });
             alert('Registration successful!');
         } catch (error) {
@@ -64,6 +67,10 @@ function Register() {
                 Show Password
             </label>
             <input type="text" value={uniqueField} onChange={(e) => setUniqueField(e.target.value)} placeholder="Unique Field" required />
+            <ReCAPTCHA
+                sitekey="your-recaptcha-site-key"
+                onChange={(token) => setRecaptchaToken(token)}
+            />
             <button type="submit">Register</button>
         </form>
     );
